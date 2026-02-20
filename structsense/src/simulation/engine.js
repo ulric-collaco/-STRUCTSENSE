@@ -1,5 +1,18 @@
 // StructSense Simulation Engine
 // Pure client-side simulation — no hardware, no API
+//
+// ─────────────────────────────────────────────────────────────────
+// REAL SENSOR INTEGRATION GUIDE
+// To connect live hardware, replace the simulation generators below
+// with a data-fetching layer.  Everything else (health formula,
+// RUL regression, alert engine, Zustand store) stays unchanged.
+//
+// Recommended approaches:
+//   REST polling  → replace tick() body with a fetch() to your API
+//   WebSocket     → push new readings directly into useStore via
+//                   set({ nodes: [incomingNode] }) from a ws.onmessage handler
+//   MQTT (bridge) → use a MQTT-over-WebSocket client (e.g. mqtt.js)
+// ─────────────────────────────────────────────────────────────────
 
 export const SIMULATION_MODES = {
   NORMAL: 'NORMAL',
@@ -33,6 +46,9 @@ const brownian = (prev, target, revert, noise) =>
 const transient = (prob, magnitude) => Math.random() < prob ? rand(magnitude * 0.6, magnitude) : 0
 
 // ---------- health & risk ----------
+// Health formula operates on raw sensor values — works identically on
+// simulated or real data.  Tune the weights (0.5 / 40 / 5) to match
+// your material spec and sensor calibration.
 export function calcHealthIndex(stress, vibration, fatigueIndex) {
   const h = 100 - (stress * 0.5) - (fatigueIndex * 40) - (vibration * 5)
   return clamp(h, 0, 100)
@@ -84,6 +100,22 @@ export function calcRUL(stressHistory, criticalThreshold) {
 }
 
 // ---------- mode-specific generators ----------
+// ┌─────────────────────────────────────────────────────────────────┐
+// │  SENSOR DATA ENTRY POINT — OPTION A (polling / WebSocket)       │
+// │                                                                 │
+// │  If you have a real sensor feed, DELETE all five generator      │
+// │  functions below and replace the tick() function body with:     │
+// │                                                                 │
+// │    const raw = await fetchSensorReading(nodeId)                 │
+// │    // raw = { stress: number, vibration: number,               │
+// │    //         fatigueIndex: number }   ← units: MPa, mm/s, 0-1 │
+// │    return { stress: raw.stress,                                 │
+// │             vibration: raw.vibration,                           │
+// │             fatigueIndex: raw.fatigueIndex }                    │
+// │                                                                 │
+// │  The health formula, RUL, and alert engine beneath will work    │
+// │  on the real values with zero changes.                          │
+// └─────────────────────────────────────────────────────────────────┘
 // All generators work incrementally from prev state — no tick-based ramps.
 // Each mode has a distinct initial node (set on mode switch in the store).
 
@@ -247,6 +279,20 @@ export function generateAlerts(node, prev, thresholds, existingAlerts) {
 }
 
 // ---------- main tick ----------
+// ┌─────────────────────────────────────────────────────────────────┐
+// │  SENSOR DATA ENTRY POINT — OPTION B (direct replacement)        │
+// │                                                                 │
+// │  Replace the single line:                                       │
+// │    const { stress, vibration, fatigueIndex } =                  │
+// │        generator(prevNode, t)                                   │
+// │  with:                                                          │
+// │    const { stress, vibration, fatigueIndex } =                  │
+// │        await fetchSensorReading(prevNode.id)                    │
+// │                                                                 │
+// │  Where fetchSensorReading returns the three raw sensor values.  │
+// │  The rest of tick() — health calc, risk level, alert engine,    │
+// │  snapshot — is sensor-agnostic and needs no changes.            │
+// └─────────────────────────────────────────────────────────────────┘
 export function tick(state) {
   const { nodes, simulationMode, thresholds, alerts, tickCount } = state
   const t = tickCount
@@ -254,6 +300,7 @@ export function tick(state) {
   const generator = modeGenerators[simulationMode] || modeGenerators[SIMULATION_MODES.NORMAL]
   const prevNode = nodes[0]
 
+  // ← REPLACE THIS LINE with your real sensor fetch in production
   const { stress, vibration, fatigueIndex } = generator(prevNode, t)
   const healthIndex = calcHealthIndex(stress, vibration, fatigueIndex)
   const riskLevel = calcRiskLevel(healthIndex)
