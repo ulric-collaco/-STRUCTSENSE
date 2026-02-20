@@ -1,6 +1,4 @@
-// StructSense Simulation Engine
-// Pure client-side simulation — no hardware, no API
-//
+
 // ─────────────────────────────────────────────────────────────────
 // REAL SENSOR INTEGRATION GUIDE
 // To connect live hardware, replace the simulation generators below
