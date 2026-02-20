@@ -47,7 +47,7 @@ export default function Scene() {
     <div style={{ width: '100%', height: '100%', background: '#0d0d0d' }}>
       <Canvas
         shadows
-        camera={{ position: [0, 3, 10], fov: 45 }}
+        camera={{ position: [0, 2.5, 11], fov: 48 }}
         gl={{ antialias: true, alpha: false }}
         style={{ background: '#0d0d0d' }}
       >
@@ -59,7 +59,8 @@ export default function Scene() {
           <SceneFloor />
 
           <BridgeModel riskLevel={node.riskLevel} vibration={node.vibration} />
-          <NodeMarker node={node} position={[0, 0.35, 0.6]} />
+          {/* Sensor node on the deck surface at mid-span center (deck top = y 0.11, marker at 0.22) */}
+          <NodeMarker node={node} position={[0, 0.22, 0]} />
 
           <OrbitControls
             enablePan={false}

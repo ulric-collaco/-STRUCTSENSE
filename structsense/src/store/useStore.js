@@ -2,20 +2,29 @@ import { create } from 'zustand'
 import {
   tick,
   calcRUL,
+  calcHealthIndex,
+  calcRiskLevel,
   SIMULATION_MODES,
   DEFAULT_THRESHOLDS,
 } from '../simulation/engine.js'
 
+// Starting node state for each mode — ensures modes are visually distinct immediately
+const MODE_INIT = {
+  [SIMULATION_MODES.NORMAL]:              { stress: 28.0, vibration: 1.40, fatigueIndex: 0.04 },
+  [SIMULATION_MODES.GRADUAL_STRESS]:      { stress: 21.5, vibration: 1.05, fatigueIndex: 0.06 },
+  [SIMULATION_MODES.STRESS_SPIKE]:        { stress: 83.0, vibration: 6.20, fatigueIndex: 0.08 }, // start mid-spike
+  [SIMULATION_MODES.PROGRESSIVE_FATIGUE]:{ stress: 34.0, vibration: 2.30, fatigueIndex: 0.14 },
+  [SIMULATION_MODES.FAILURE]:             { stress: 63.0, vibration: 5.10, fatigueIndex: 0.40 },
+}
+
+function makeNode(id, vals) {
+  const healthIndex = parseFloat(calcHealthIndex(vals.stress, vals.vibration, vals.fatigueIndex).toFixed(2))
+  return { id, ...vals, healthIndex, riskLevel: calcRiskLevel(healthIndex) }
+}
+
 const MAX_HISTORY = 200
 
-const INITIAL_NODE = {
-  id: 'NODE_1',
-  stress: 28.5,
-  vibration: 1.4,
-  fatigueIndex: 0.05,
-  healthIndex: 82.5,
-  riskLevel: 'Healthy',
-}
+const INITIAL_NODE = makeNode('NODE_1', MODE_INIT[SIMULATION_MODES.NORMAL])
 
 const useStore = create((set, get) => ({
   // ----- state -----
@@ -114,13 +123,23 @@ const useStore = create((set, get) => ({
       }))
     }
 
-    // Restart interval with same speed but new mode
-    const wasRunning = state.isRunning
-    if (wasRunning) {
-      clearInterval(state._intervalId)
-    }
+    // Reset node to mode-appropriate initial values so difference is visible immediately
+    const initVals = MODE_INIT[mode] || MODE_INIT[SIMULATION_MODES.NORMAL]
+    const freshNode = makeNode('NODE_1', initVals)
 
-    set({ simulationMode: mode, _intervalId: null, isRunning: false, tickCount: 0 })
+    // Restart interval with new mode
+    const wasRunning = state.isRunning
+    if (wasRunning) clearInterval(state._intervalId)
+
+    set({
+      simulationMode: mode,
+      nodes: [freshNode],
+      historicalData: [],
+      alerts: [],
+      tickCount: 0,
+      _intervalId: null,
+      isRunning: false,
+    })
 
     if (wasRunning) {
       setTimeout(() => get().startSimulation(), 50)

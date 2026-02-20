@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import useStore from '../store/useStore.js'
-import { SIMULATION_MODES } from '../simulation/engine.js'
 
 const SPEED_OPTIONS = [
   { value: 0.5, label: '0.5×', desc: 'Slow (4s interval)' },
@@ -9,8 +8,6 @@ const SPEED_OPTIONS = [
   { value: 5, label: '5×', desc: 'Very fast (400ms)' },
   { value: 10, label: '10×', desc: 'Max speed (200ms)' },
 ]
-
-const MODE_OPTIONS = Object.values(SIMULATION_MODES)
 
 function FieldRow({ label, desc, children }) {
   return (
@@ -76,8 +73,6 @@ export default function Settings() {
   const {
     thresholds,
     setThresholds,
-    simulationMode,
-    setSimulationMode,
     simulationSpeed,
     setSimulationSpeed,
     resetSystem,
@@ -235,55 +230,6 @@ export default function Settings() {
               ⚠ {validationError}
             </div>
           )}
-        </div>
-
-        {/* === SIMULATION MODE === */}
-        <SectionHeader label="SIMULATION MODE" color="#00FF6A" />
-        <div style={{
-          background: '#111',
-          border: '2px solid #1a1a1a',
-          marginBottom: 32,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: 0,
-          overflow: 'hidden',
-        }}>
-          {MODE_OPTIONS.map((mode, i) => {
-            const isActive = simulationMode === mode
-            const mc = {
-              NORMAL: '#00FF6A',
-              GRADUAL_STRESS: '#FFD600',
-              STRESS_SPIKE: '#FF8C00',
-              PROGRESSIVE_FATIGUE: '#FF8C00',
-              FAILURE: '#FF2D2D',
-            }[mode] || '#FFD600'
-
-            return (
-              <button
-                key={mode}
-                onClick={() => setSimulationMode(mode)}
-                style={{
-                  padding: '18px 16px',
-                  background: isActive ? `${mc}12` : 'transparent',
-                  border: 'none',
-                  borderRight: i < MODE_OPTIONS.length - 1 ? '1px solid #1a1a1a' : 'none',
-                  borderTop: isActive ? `3px solid ${mc}` : '3px solid transparent',
-                  color: isActive ? mc : '#555',
-                  fontFamily: 'var(--font-condensed)',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.12em',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  textAlign: 'center',
-                }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#888' }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = '#555' }}
-              >
-                {mode.replace(/_/g, '\n')}
-              </button>
-            )
-          })}
         </div>
 
         {/* === SIMULATION SPEED === */}
